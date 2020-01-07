@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	tcpAddr, err := net.ResolveTCPAddr("tcp", "47.106.183.125:9001") //  127.0.0.1
+	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:9001") //  127.0.0.1
 	if err != nil {
 		panic(err)
 	}
@@ -30,7 +30,7 @@ func main() {
 		msg := fmt.Sprintf("hello %d", i)
 		log.Println("client send: ", msg)
 
-		_ = tc.AsyncWritePacket(tcp.NewCharPacket(48, tcp.RandBytes(4), 97, []byte(msg)))
+		_ = tc.AsyncWritePacket(tcp.NewCharPacket('1', tcp.RandBytes(4), '2', []byte(msg)))
 
 		i++
 		time.Sleep(time.Second * 2)

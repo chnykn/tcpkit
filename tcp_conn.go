@@ -85,20 +85,20 @@ func (self *TCPConn) readLoop() {
 
 	for {
 		select {
-			case <-self.exitChan:
-				return
-			default:
-				if self.readDeadline > 0 {
-					_ = self.conn.SetReadDeadline(time.Now().Add(self.readDeadline))
+		case <-self.exitChan:
+			return
+		default:
+			if self.readDeadline > 0 {
+				_ = self.conn.SetReadDeadline(time.Now().Add(self.readDeadline))
+			}
+			p, err := self.protocol.ReadPacket(self.conn)
+			if err != nil {
+				if err != io.EOF {
+					self.callback.OnError(self, err)
 				}
-				p, err := self.protocol.ReadPacket(self.conn)
-				if err != nil {
-					if err != io.EOF {
-						self.callback.OnError(self, err)
-					}
-					return
-				}
-				self.readChan <- p
+				return //如果ReadPacket出错退出 就会关闭当前连接: 本函数开头defer当中有Close
+			}
+			self.readChan <- p
 		}
 	}
 }
@@ -146,16 +146,15 @@ func (self *TCPConn) ReadPacket() (Packet, error) {
 	return self.protocol.ReadPacket(self.conn)
 }
 
-
 func (self *TCPConn) AsyncWritePacket(p Packet) error {
 	if self.IsClosed() {
 		return ErrConnClosing
 	}
 	select {
-		case self.writeChan <- p:
-			return nil
-		default:
-			return ErrBufferFull
+	case self.writeChan <- p:
+		return nil
+	default:
+		return ErrBufferFull
 	}
 }
 
@@ -164,10 +163,10 @@ func (self *TCPConn) AsyncWritePacketWithTimeout(p Packet, sec int) error {
 		return ErrConnClosing
 	}
 	select {
-		case self.writeChan <- p:
-			return nil
-		case <-time.After(time.Second * time.Duration(sec)):
-			return ErrWriteTimeout
+	case self.writeChan <- p:
+		return nil
+	case <-time.After(time.Second * time.Duration(sec)):
+		return ErrWriteTimeout
 	}
 }
 
@@ -238,7 +237,3 @@ func (self *TCPConn) GetExtraData(key string) interface{} {
 	}
 	return nil
 }
-
-
-
-

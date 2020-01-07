@@ -26,6 +26,6 @@ func (self *CPLCallback) OnMessage(conn *tcp.TCPConn, packet tcp.Packet) {
 
 	//TODO: ... 根据客户端的包，进行相应的操作，并返回相应的包 ...
 
-	log.Println("server send: ", "ok")
+	log.Println("server send: ", "0")
 	_ = conn.AsyncWritePacket(tcp.NewCharPacket(packet.Typ()+1, packet.Num(), packet.Cmd(), []byte("0")))
 }

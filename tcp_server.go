@@ -57,7 +57,6 @@ func NewTCPServer(tcpAddr string, callback CallBack, protocol Protocol) *TCPServ
 	}
 }
 
-
 //======================================================================================
 
 //ListenAndServe 使用TCPServer的tcpAddr创建TCPListener并调用Server()方法开启监听
@@ -98,14 +97,14 @@ func (self *TCPServer) Serve(lsn *net.TCPListener) error {
 
 	for {
 		select {
-			case <-self.exitChan:
-				return errors.New("TCPServer Closed")
-			default:
+		case <-self.exitChan:
+			return errors.New("TCPServer Closed")
+		default:
 		}
 
 		conn, err := self.listener.AcceptTCP()
 		if err != nil {
-			err, ok := err.(net.Error);
+			err, ok := err.(net.Error)
 			if ok && err.Temporary() {
 				if tempDelay == 0 {
 					tempDelay = 5 * time.Millisecond
@@ -207,4 +206,8 @@ func (self *TCPServer) SetReadDeadline(t time.Duration) {
 
 func (self *TCPServer) SetWriteDeadline(t time.Duration) {
 	self.writeDeadline = t
+}
+
+func (self *TCPServer) GetAddr() string {
+	return self.tcpAddr
 }
