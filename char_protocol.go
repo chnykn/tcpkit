@@ -4,31 +4,28 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 )
 
 var (
 	ErrCRCInvalid   = errors.New("packet's crc invalid")
 	ErrCRCNotExists = errors.New("packet's crc not exist")
-
-	ErrPacketSizeToLong  = errors.New("packet's size gt 240")
-	ErrPacketSizeToShort = errors.New("packet's size lt 11")
-)
-
-const (
-	maxPacketSize = 240
-	minPacketSize = 11
 )
 
 type CharPacket struct {
-	typ byte     //长度1
-	num []byte   //长度3
-	cmd byte     //长度1
-	body []byte  //长度n
-	crc []byte   //长度4
+	typ  byte   //长度1
+	num  []byte //长度4
+	cmd  byte   //长度1
+	body []byte //长度n
+	crc  []byte //长度4
 }
 
 func NewCharPacket(typ byte, num []byte, cmd byte, body []byte) *CharPacket {
+	if len(num) != 4 {
+		panic(fmt.Errorf("num's len != 4"))
+	}
+
 	return &CharPacket{
 		typ:  typ,
 		num:  num,
@@ -80,12 +77,9 @@ func (self *CharPacket) Bytes() []byte {
 	return buf.Bytes()
 }
 
-
 //=======================================================================
 
-
 type CharProtocol struct {
-
 }
 
 func parsePacket(data []byte) (*CharPacket, error) {
@@ -100,20 +94,10 @@ func parsePacket(data []byte) (*CharPacket, error) {
 		return nil, ErrCRCNotExists
 	}
 
-	if n > maxPacketSize {
-		return nil, ErrPacketSizeToLong
-	}
-
-	if n < minPacketSize {
-		return nil, ErrPacketSizeToShort
-	}
-
-	var typ = data[0]
-	var num = data[1:4]
-	var cmd = data[4]
-	var body = data[5:n]
-
-
+	var typ = data[0]    //长度1
+	var num = data[1:5]  //长度4
+	var cmd = data[5]    //长度1
+	var body = data[6:n] //长度n-6
 
 	//检查crc
 	var crc1 = data[n+1:]

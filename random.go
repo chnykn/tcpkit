@@ -2,20 +2,23 @@ package tcp
 
 import (
 	"math/rand"
-	"strconv"
 	"time"
 )
 
-func RandomNum() []byte {
+// RandBytes 生成随机字符串
+func RandBytes(len int) []byte {
 	rnd := rand.New(rand.NewSource(time.Now().Unix()))
-	result := strconv.FormatInt(int64(rnd.Intn(1000)), 10)
+	bytes := make([]byte, len)
 
+	var i int
 	for {
-		if len(result) >= 3 {
+		b := 36 + rnd.Intn(90) // 从36开始 绕开#(35)
+		bytes[i] = byte(b)
+		i += 1
+		if i >= len {
 			break
 		}
-		result = "0" + result
 	}
 
-	return []byte(result)
+	return bytes
 }

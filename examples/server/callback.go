@@ -1,13 +1,11 @@
 package main
 
 import (
+	"github.com/chnykn/tcp"
 	"log"
-	"tcp"
 )
 
-
 type CPLCallback struct{}
-
 
 func (self *CPLCallback) OnConnected(conn *tcp.TCPConn) {
 	log.Println("new conn: ", conn.GetRemoteIPAddress())
