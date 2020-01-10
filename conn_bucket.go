@@ -1,7 +1,6 @@
 package tcp
 
 import (
-	"log"
 	"sync"
 )
 
@@ -19,31 +18,31 @@ func NewTCPConnBucket() *TCPConnBucket {
 	return tcb
 }
 
-func (self *TCPConnBucket) Put(id string, c *TCPConn) {
-	log.Println("TCPConnBucket PUT id =", id)
+func (self *TCPConnBucket) Put(key string, c *TCPConn) {
+	//log.Println("TCPConnBucket PUT key =", key)
 
 	self.mu.Lock()
-	if conn, ok := self.m[id]; ok {
+	if conn, ok := self.m[key]; ok {
 		conn.Close()
 	}
-	self.m[id] = c
+	self.m[key] = c
 	self.mu.Unlock()
 }
 
-func (self *TCPConnBucket) Get(id string) *TCPConn {
+func (self *TCPConnBucket) Get(key string) *TCPConn {
 	self.mu.RLock()
 	defer self.mu.RUnlock()
-	if conn, ok := self.m[id]; ok {
+	if conn, ok := self.m[key]; ok {
 		return conn
 	}
 	return nil
 }
 
-func (self *TCPConnBucket) Delete(id string) {
-	log.Println("TCPConnBucket Delete id =", id)
+func (self *TCPConnBucket) Delete(key string) {
+	//log.Println("TCPConnBucket Delete key =", key)
 
 	self.mu.Lock()
-	delete(self.m, id)
+	delete(self.m, key)
 	self.mu.Unlock()
 }
 func (self *TCPConnBucket) GetAll() map[string]*TCPConn {
