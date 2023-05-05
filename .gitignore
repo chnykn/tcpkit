@@ -1,11 +1,6 @@
-/.idea/dictionaries/Administrator.xml
-/.idea/codeStyles/codeStyleConfig.xml
-/.idea/misc.xml
-/.idea/modules.xml
-/.idea/codeStyles/Project.xml
-/.idea/inspectionProfiles/Project_Default.xml
-/.idea/tcp.iml
-/.idea/vcs.xml
-/.idea/workspace.xml
-/examples/client/client.exe
-/examples/server/server.exe
+*.log
+*.exe
+*.rar
+/go.sum
+/.idea/
+/examples/

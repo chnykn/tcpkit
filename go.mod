@@ -1,3 +1,3 @@
-module github.com/chnykn/tcp
+module github.com/chnykn/tcpkit
 
-go 1.13
+go 1.20

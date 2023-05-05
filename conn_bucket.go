@@ -1,68 +1,69 @@
-package tcp
+package tcpkit
 
 import (
 	"sync"
 )
 
-//TCPConnBucket 用来存放和管理TCPConn连接
-type TCPConnBucket struct {
-	m  map[string]*TCPConn
+// ConnBucket 用来存放和管理TCPConn连接
+type ConnBucket struct {
+	m  map[string]*Conn
 	mu *sync.RWMutex
 }
 
-func NewTCPConnBucket() *TCPConnBucket {
-	tcb := &TCPConnBucket{
-		m:  make(map[string]*TCPConn),
+func NewConnBucket() *ConnBucket {
+	tcb := &ConnBucket{
+		m:  make(map[string]*Conn),
 		mu: new(sync.RWMutex),
 	}
 	return tcb
 }
 
-func (self *TCPConnBucket) Put(key string, c *TCPConn) {
-	//log.Println("TCPConnBucket PUT key =", key)
+func (o *ConnBucket) Put(key string, c *Conn) {
+	//log.Println("ConnBucket PUT key =", key)
 
-	self.mu.Lock()
-	if conn, ok := self.m[key]; ok {
+	o.mu.Lock()
+	if conn, ok := o.m[key]; ok {
 		conn.Close()
 	}
-	self.m[key] = c
-	self.mu.Unlock()
+	o.m[key] = c
+	o.mu.Unlock()
 }
 
-func (self *TCPConnBucket) Get(key string) *TCPConn {
-	self.mu.RLock()
-	defer self.mu.RUnlock()
-	if conn, ok := self.m[key]; ok {
+func (o *ConnBucket) Get(key string) *Conn {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
+	if conn, ok := o.m[key]; ok {
 		return conn
 	}
 	return nil
 }
 
-func (self *TCPConnBucket) Delete(key string) {
-	//log.Println("TCPConnBucket Delete key =", key)
+func (o *ConnBucket) Delete(key string) {
+	//log.Println("ConnBucket Delete key =", key)
 
-	self.mu.Lock()
-	delete(self.m, key)
-	self.mu.Unlock()
+	o.mu.Lock()
+	delete(o.m, key)
+	o.mu.Unlock()
 }
-func (self *TCPConnBucket) GetAll() map[string]*TCPConn {
-	self.mu.RLock()
-	defer self.mu.RUnlock()
-	m := make(map[string]*TCPConn, len(self.m))
-	for k, v := range self.m {
+
+func (o *ConnBucket) GetAll() map[string]*Conn {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
+	m := make(map[string]*Conn, len(o.m))
+	for k, v := range o.m {
 		m[k] = v
 	}
 	return m
 }
 
-func (self *TCPConnBucket) removeClosedTCPConn() {
+func (o *ConnBucket) removeClosedTCPConn() {
 	removeKey := make(map[string]struct{})
-	for key, conn := range self.GetAll() {
+	for key, conn := range o.GetAll() {
 		if conn.IsClosed() {
 			removeKey[key] = struct{}{}
 		}
 	}
 	for key := range removeKey {
-		self.Delete(key)
+		o.Delete(key)
 	}
 }
