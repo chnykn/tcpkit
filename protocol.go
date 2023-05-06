@@ -13,9 +13,3 @@ type Protocol interface {
 	ReadPacket(reader io.Reader) (Packet, error)
 	WritePacket(writer io.Writer, packet Packet) error
 }
-
-/*
-func PacketToString(p Packet) string {
-	return string(p.Bytes())
-}
-*/

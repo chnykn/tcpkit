@@ -35,7 +35,7 @@ func Mpeg2Crc(data []byte) uint32 {
 	return crc
 }
 
-// RandBytes 生成随机字符串
+// RandBytes Generate random string
 func RandBytes(len int) []byte {
 	rnd := rand.New(rand.NewSource(time.Now().Unix()))
 	bytes := make([]byte, len)

@@ -24,7 +24,6 @@ func init() {
 	logger = log.New(os.Stdout, "", log.Lshortfile)
 }
 
-// Server 结构定义
 type Server struct {
 	//TCP address to listen on
 	tcpAddr string
@@ -45,7 +44,7 @@ type Server struct {
 	connBucket    *ConnBucket
 }
 
-// NewServer 返回一个TCPServer实例
+// NewServer Return an instance of Server
 func NewServer(tcpAddr string, callback CallBack, protocol Protocol) *Server {
 	return &Server{
 		tcpAddr:  tcpAddr,
@@ -59,7 +58,7 @@ func NewServer(tcpAddr string, callback CallBack, protocol Protocol) *Server {
 
 //======================================================================================
 
-// ListenAndServe 使用TCPServer的tcpAddr创建TCPListener并调用Server()方法开启监听
+// ListenAndServe Create a TCPListener using the Server's tcpAddr, and call the Serve() method to start listening
 func (o *Server) ListenAndServe() error {
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", o.tcpAddr)
 	if err != nil {
@@ -75,20 +74,20 @@ func (o *Server) ListenAndServe() error {
 	return nil
 }
 
-// Serve 使用指定的TCPListener开启监听
+// Serve -- Start listening using the specified TCPListener
 func (o *Server) Serve(lsn *net.TCPListener) error {
 	o.listener = lsn
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("Serve error", r)
+			log.Println("serve error", r)
 		}
 		_ = o.listener.Close()
 	}()
 
-	//清理无效连接
+	//Clean up invalid connections
 	go func() {
 		for {
-			o.removeClosedTCPConn()
+			o.removeClosedConn()
 			time.Sleep(time.Millisecond * 10)
 		}
 	}()
@@ -98,7 +97,7 @@ func (o *Server) Serve(lsn *net.TCPListener) error {
 	for {
 		select {
 		case <-o.exitChan:
-			return errors.New("Server Closed")
+			return errors.New("server closed")
 		default:
 		}
 
@@ -123,23 +122,23 @@ func (o *Server) Serve(lsn *net.TCPListener) error {
 		}
 
 		tempDelay = 0
-		tcpConn := o.newTCPConn(conn, o.callback, o.protocol)
+		tcpConn := o.newConn(conn, o.callback, o.protocol)
 		tcpConn.setReadDeadline(o.readDeadline)
 		tcpConn.setWriteDeadline(o.writeDeadline)
 		o.connBucket.Put(tcpConn.GetRemoteAddr().String(), tcpConn)
 	}
 }
 
-func (o *Server) removeClosedTCPConn() {
+func (o *Server) removeClosedConn() {
 	select {
 	case <-o.exitChan:
 		return
 	default:
-		o.connBucket.removeClosedTCPConn()
+		o.connBucket.removeClosedConn()
 	}
 }
 
-func (o *Server) newTCPConn(conn *net.TCPConn, callback CallBack, protocol Protocol) *Conn {
+func (o *Server) newConn(conn *net.TCPConn, callback CallBack, protocol Protocol) *Conn {
 	if callback == nil {
 		// if the handler is nil, use o handler
 		callback = o.callback
@@ -157,7 +156,7 @@ func (o *Server) newTCPConn(conn *net.TCPConn, callback CallBack, protocol Proto
 
 //----------------------------------------------------------------------------
 
-// Connect 使用指定的callback和protocol连接其他TCPServer，返回TCPConn
+// Connect to other TCPServer using the specified callback and protocol
 func (o *Server) Connect(ip string, callback CallBack, protocol Protocol) (*Conn, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", ip)
 	if err != nil {
@@ -168,12 +167,12 @@ func (o *Server) Connect(ip string, callback CallBack, protocol Protocol) (*Conn
 		return nil, err
 	}
 
-	tcpConn := o.newTCPConn(conn, callback, protocol)
+	tcpConn := o.newConn(conn, callback, protocol)
 	return tcpConn, nil
 
 }
 
-// Close 首先关闭所有连接，然后关闭TCPServer
+// Close all connections, then close the TCPServer.
 func (o *Server) Close() {
 	defer o.listener.Close()
 	for _, c := range o.connBucket.GetAll() {
@@ -185,17 +184,17 @@ func (o *Server) Close() {
 
 //----------------------------------------------------------------------------
 
-func (o *Server) GetAllTCPConn() []*Conn {
+func (o *Server) GetConn(key string) *Conn {
+	return o.connBucket.Get(key)
+}
+
+func (o *Server) GetAllConn() []*Conn {
 	result := []*Conn{}
 	allConn := o.connBucket.GetAll()
 	for _, conn := range allConn {
 		result = append(result, conn)
 	}
 	return result
-}
-
-func (o *Server) GetTCPConn(key string) *Conn {
-	return o.connBucket.Get(key)
 }
 
 //----------------------------------------------------------------------------

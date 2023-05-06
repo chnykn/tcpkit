@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-// ConnBucket 用来存放和管理TCPConn连接
+// ConnBucket Used to store and manage Conn connections
 type ConnBucket struct {
 	m  map[string]*Conn
 	mu *sync.RWMutex
@@ -56,7 +56,7 @@ func (o *ConnBucket) GetAll() map[string]*Conn {
 	return m
 }
 
-func (o *ConnBucket) removeClosedTCPConn() {
+func (o *ConnBucket) removeClosedConn() {
 	removeKey := make(map[string]struct{})
 	for key, conn := range o.GetAll() {
 		if conn.IsClosed() {

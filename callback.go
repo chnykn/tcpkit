@@ -1,17 +1,17 @@
 package tcpkit
 
-// CallBack 是一个回调接口，用于连接的各种事件处理
+// CallBack interface used for various event handling during a connectio
 type CallBack interface {
 
-	//OnConnected 链接建立回调
+	//OnConnected when connection established
 	OnConnected(conn *Conn)
 
-	//OnMessage 消息处理回调
+	//OnMessage when message processing
 	OnMessage(conn *Conn, p Packet)
 
-	//OnDisconnected 链接断开回调
+	//OnDisconnected when connection disconnected
 	OnDisconnected(conn *Conn)
 
-	//OnError 错误回调
+	//OnError when error occurred.
 	OnError(conn *Conn, err error)
 }
