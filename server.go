@@ -32,7 +32,7 @@ type Server struct {
 	listener *net.TCPListener
 
 	//callback is an interface
-	//it's used to process the connect establish, close and data receive
+	//it's used to process to connect establish, close and data receive
 	callback CallBack
 	protocol Protocol
 

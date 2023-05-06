@@ -5,9 +5,24 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
+	"fmt"
 	"io"
 	"strconv"
+)
+
+const (
+	idBtsLen = 6
+	idStrLen = 12
+
+	cmdBtsLen = 2
+	cmdStrLen = 4
+
+	sizeBtsLen = 2
+	sumBtsLen  = 1
+
+	// starting & delimiter (2 digits), ID (6 digits), command (2 digits), length of content (2 digits),
+	// content (unknown, but at least 0), checksum (1 digit). Total of at least 13 digits."
+	minPktBtsLen = 13
 )
 
 type BytePacket struct {
@@ -18,35 +33,65 @@ type BytePacket struct {
 	sum  byte   //size 1
 }
 
-func NewBytePacket(id string, cmd []byte, content []byte) (*BytePacket, error) {
-	if len(id) != 12 || len(cmd) != 2 {
-		return nil, errors.New("packet's args invalid")
+func NewBytePacket(id string, cmd string, content []byte) (*BytePacket, error) {
+	if len(id) != idStrLen {
+		return nil, fmt.Errorf("packet's id length must be %d", idStrLen)
+	}
+
+	if len(cmd) != cmdStrLen {
+		return nil, fmt.Errorf("packet's cmd length must be %d", cmdStrLen)
 	}
 
 	var buf bytes.Buffer
 
-	btsId, _ := hex.DecodeString(id)
-	buf.Write(btsId)
+	idBts, _ := hex.DecodeString(id)
+	buf.Write(idBts)
 
-	buf.Write(cmd)
+	cmdBts, _ := hex.DecodeString(cmd)
+	buf.Write(cmdBts)
 
-	btsSize := make([]byte, 2)
-	binary.BigEndian.PutUint16(btsSize, uint16(len(content)))
-	buf.Write(btsSize)
+	sizeBts := make([]byte, 2)
+	binary.BigEndian.PutUint16(sizeBts, uint16(len(content)))
+	buf.Write(sizeBts)
 
 	buf.Write(content)
 	sum := CheckSum8(buf.Bytes(), 0, -1)
 
 	return &BytePacket{
-		id:   btsId,
-		cmd:  cmd,
-		size: btsSize,
+		id:   idBts,
+		cmd:  cmdBts,
+		size: sizeBts,
 		cont: content,
 		sum:  sum,
 	}, nil
 }
 
 //----------------------------------------
+
+func (o *BytePacket) Id() string {
+	return hex.EncodeToString(o.id)
+}
+
+func (o *BytePacket) Cmd() string {
+	return hex.EncodeToString(o.cmd)
+}
+
+func (o *BytePacket) Size() int { //uint16
+	size := binary.BigEndian.Uint16(o.size)
+	return int(size)
+}
+
+func (o *BytePacket) Content() string { //uint16
+	return string(o.cont)
+}
+
+func (o *BytePacket) ContentBytes() []byte { //uint16
+	return o.cont
+}
+
+func (o *BytePacket) Checksum() int {
+	return int(o.sum)
+}
 
 func (o *BytePacket) Bytes() []byte {
 	var buf bytes.Buffer
@@ -71,20 +116,19 @@ func (o *BytePacket) ToString() string {
 	var buf bytes.Buffer
 
 	buf.WriteString("( Id:")
-	buf.WriteString(hex.EncodeToString(o.id))
+	buf.WriteString(o.Id())
 
 	buf.WriteString(", Cmd:")
-	buf.WriteString(hex.EncodeToString(o.cmd))
+	buf.WriteString(o.Cmd())
 
 	buf.WriteString(", Size:")
-	size := binary.BigEndian.Uint16(o.size)
-	buf.WriteString(strconv.Itoa(int(size)))
+	buf.WriteString(strconv.Itoa(o.Size()))
 
 	buf.WriteString(", Content:")
-	buf.Write(o.cont)
+	buf.WriteString(o.Content())
 
 	buf.WriteString(", Sum:")
-	buf.WriteString(strconv.Itoa(int(o.sum)))
+	buf.WriteString(strconv.Itoa(o.Checksum()))
 
 	buf.WriteString(" )")
 	return buf.String()
@@ -99,30 +143,28 @@ func parsePacket(data []byte) (*BytePacket, error) {
 
 	l := len(data)
 
-	// starting & delimiter (2 digits), ID (6 digits), command (2 digits), length of content (2 digits),
-	// content (unknown, but at least 0), checksum (1 digit). Total of at least 13 digits."
-	if l < 13 {
-		return nil, errors.New("packet's length invalid")
+	if l < minPktBtsLen {
+		return nil, fmt.Errorf("packet length cannot be less than %d", minPktBtsLen)
 	}
 
 	//           '('                  ')'
 	if data[0] != 0x28 || data[l-1] != 0x29 {
-		return nil, errors.New("packet's format invalid")
+		return nil, fmt.Errorf("packet must start with '(' and end with ')'")
 	}
 
 	n := 1
-	var id = data[n : n+6]
+	var id = data[n : n+idBtsLen]
 
-	n += 6
-	var cmd = data[n : n+2]
+	n += idBtsLen
+	var cmd = data[n : n+cmdBtsLen]
 
-	n += 2
-	var btsSize = data[n : n+2]
+	n += cmdBtsLen
+	var btsSize = data[n : n+sizeBtsLen]
 
-	n += 2
+	n += sizeBtsLen
 	size := int(binary.BigEndian.Uint16(btsSize))
-	if n+size > l-1 { //
-		return nil, errors.New("packet's size invalid")
+	if n+size > l-2 { // delimiter ) and sum, 2 digits
+		return nil, fmt.Errorf("the size of the content in the packet is incorrect")
 	}
 	var content = data[n : n+size]
 
@@ -131,7 +173,7 @@ func parsePacket(data []byte) (*BytePacket, error) {
 	sum1 := sum[0]
 	sum2 := CheckSum8(data, 1, n)
 	if sum1 != sum2 {
-		return nil, errors.New("packet's sum invalid")
+		return nil, fmt.Errorf("then checksum is incorrect. Expected %x, but %x", sum1, sum2)
 	}
 
 	return &BytePacket{

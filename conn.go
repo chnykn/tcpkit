@@ -31,7 +31,7 @@ type Conn struct {
 	exitChan  chan struct{}
 	closeOnce sync.Once
 	exitFlag  int32
-	extraData map[string]interface{}
+	extraData map[string]any
 }
 
 func NewConn(conn *net.TCPConn, callback CallBack, protocol Protocol) *Conn {
@@ -96,7 +96,9 @@ func (o *Conn) readLoop() {
 				if err != io.EOF {
 					o.callback.OnError(o, err)
 				}
-				return //如果ReadPacket出错退出 就会关闭当前连接: 本函数开头defer当中有Close
+				//If an error occurs in ReadPacket and the function exits, the current connection will be closed.
+				//Close is present in the defer statement at the beginning of this function
+				return
 			}
 			o.readChan <- p
 		}
@@ -199,7 +201,7 @@ func (o *Conn) GetLocalAddr() net.Addr {
 	return o.conn.LocalAddr()
 }
 
-// GetLocalIPAddress 返回socket连接本地的ip地址
+// GetLocalIPAddress get the local IP address of a socket connection.
 func (o *Conn) GetLocalIPAddress() string {
 	return strings.Split(o.GetLocalAddr().String(), ":")[0]
 }
@@ -224,16 +226,22 @@ func (o *Conn) setWriteDeadline(t time.Duration) {
 
 //----------------------------------------------------------------------------
 
-func (o *Conn) SetExtraData(key string, data interface{}) {
+func (o *Conn) SetExtraData(key string, data any) {
 	if o.extraData == nil {
-		o.extraData = make(map[string]interface{})
+		o.extraData = make(map[string]any)
 	}
 	o.extraData[key] = data
 }
 
-func (o *Conn) GetExtraData(key string) interface{} {
-	if data, ok := o.extraData[key]; ok {
-		return data
+func (o *Conn) GetExtraData(key string) any {
+	if o.extraData != nil {
+		if data, ok := o.extraData[key]; ok {
+			return data
+		}
 	}
 	return nil
+}
+
+func (o *Conn) ExtraData() map[string]any {
+	return o.extraData
 }
