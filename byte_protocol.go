@@ -171,9 +171,10 @@ func parsePacket(data []byte) (*BytePacket, error) {
 	n += size
 	sum := data[n : n+1]
 	sum1 := sum[0]
-	sum2 := CheckSum8(data, 1, n)
+	sum2 := BCCVerify(data, 1, n)
 	if sum1 != sum2 {
-		return nil, fmt.Errorf("then checksum is incorrect. Expected %x, but %x", sum1, sum2)
+		//fmt.Printf("checksum is incorrect. Expected %x, but %x \n", sum1, sum2)
+		return nil, fmt.Errorf("checksum is incorrect. Expected %x, but %x", sum1, sum2)
 	}
 
 	return &BytePacket{

@@ -18,6 +18,33 @@ func CheckSum8(bts []byte, start, end int) byte {
 	return res
 }
 
+func BCCVerify(bts []byte, start, end int) byte {
+	var res byte = 0
+	if end < 0 {
+		end = len(bts)
+	}
+
+	for i := start; i < end; i++ {
+		res = res ^ bts[i]
+	}
+
+	return res
+}
+
+/*
+UCHAR BCCVerify(UCHAR *buf,UINT len)
+{
+ UCHAR s=0;
+
+ for (UINT i=0;i<len;i++)
+ {
+  s = s^(*(buf+i));
+ }
+
+ return s;
+}
+*/
+
 // Mpeg2Crc is an algorithm for CRC-32/MPEG-2 calculation
 func Mpeg2Crc(data []byte) uint32 {
 	crc := uint32(0xffffffff)
