@@ -7,7 +7,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
+	"time"
 )
 
 const (
@@ -55,7 +57,7 @@ func NewBytePacket(id string, cmd string, content []byte) (*BytePacket, error) {
 	buf.Write(sizeBts)
 
 	buf.Write(content)
-	sum := CheckSum8(buf.Bytes(), 0, -1)
+	sum := BCCVerify(buf.Bytes(), 0, -1)
 
 	return &BytePacket{
 		id:   idBts,
@@ -104,7 +106,7 @@ func (o *BytePacket) Bytes() []byte {
 	buf.Write(o.cont)
 
 	bts := buf.Bytes()
-	sum := CheckSum8(bts, 1, len(bts))
+	sum := BCCVerify(bts, 1, len(bts))
 	buf.WriteByte(sum)
 
 	buf.WriteByte(')')
@@ -137,9 +139,50 @@ func (o *BytePacket) ToString() string {
 //=============================================================================
 
 type ByteProtocol struct {
+	LogEnabled bool
 }
 
-func parsePacket(data []byte) (*BytePacket, error) {
+/*
+check if there is 0x3d in the data, if so, then determine what data is followed by 0x3D.
+If the data received is 0x3D 0x15, 0x3D 0x14, 0x3D 0x00,
+convert these data to 0x28, 0x29, 0x3D respectively.
+*/
+func escapePacket(data []byte) []byte {
+	res := data
+	i := 0
+	h := len(res) - 1
+	for {
+		if (res[i] == 0x3D) && (i < h) {
+			escaped := false
+
+			if res[i+1] == 0x00 {
+				escaped = true
+			} else if res[i+1] == 0x15 {
+				res[i] = 0x28
+				escaped = true
+			} else if res[i+1] == 0x14 {
+				res[i] = 0x29
+				escaped = true
+			}
+
+			if escaped {
+				res = append(res[:i+1], res[i+2:]...)
+				h -= 1
+			}
+		}
+
+		i += 1
+		if i > h {
+			break
+		}
+	}
+
+	return res
+}
+
+func parsePacket(data []byte, logEnabled bool) (*BytePacket, error) {
+
+	data = escapePacket(data)
 
 	l := len(data)
 
@@ -158,6 +201,14 @@ func parsePacket(data []byte) (*BytePacket, error) {
 	n += idBtsLen
 	var cmd = data[n : n+cmdBtsLen]
 
+	pktName := hex.EncodeToString(cmd)
+	if logEnabled {
+		now := time.Now().Format("01-02 15.04.05.000")
+		pktName = fmt.Sprintf("%s#%s.bin", pktName, now)
+		filename := fmt.Sprintf("./log/%s", pktName)
+		_ = os.WriteFile(filename, data, 0666)
+	}
+
 	n += cmdBtsLen
 	var btsSize = data[n : n+sizeBtsLen]
 
@@ -174,7 +225,7 @@ func parsePacket(data []byte) (*BytePacket, error) {
 	sum2 := BCCVerify(data, 1, n)
 	if sum1 != sum2 {
 		//fmt.Printf("checksum is incorrect. Expected %x, but %x \n", sum1, sum2)
-		return nil, fmt.Errorf("checksum is incorrect. Expected %x, but %x", sum1, sum2)
+		return nil, fmt.Errorf("%s checksum is incorrect. Expected %x, but %x", pktName, sum1, sum2)
 	}
 
 	return &BytePacket{
@@ -193,7 +244,7 @@ func (o *ByteProtocol) ReadPacket(reader io.Reader) (Packet, error) {
 		return nil, err
 	}
 
-	return parsePacket(data)
+	return parsePacket(data, o.LogEnabled)
 }
 
 func (o *ByteProtocol) WritePacket(writer io.Writer, packet Packet) error {
