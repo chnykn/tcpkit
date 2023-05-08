@@ -27,7 +27,7 @@ const (
 	minPktBtsLen = 13
 )
 
-type BytePacket struct {
+type BinPacket struct {
 	id   []byte //size 6
 	cmd  []byte //size 2
 	size []byte //size 2
@@ -35,7 +35,7 @@ type BytePacket struct {
 	sum  byte   //size 1
 }
 
-func NewBytePacket(id string, cmd string, content []byte) (*BytePacket, error) {
+func NewBytePacket(id string, cmd string, content []byte) (*BinPacket, error) {
 	if len(id) != idStrLen {
 		return nil, fmt.Errorf("packet's id length must be %d", idStrLen)
 	}
@@ -59,7 +59,7 @@ func NewBytePacket(id string, cmd string, content []byte) (*BytePacket, error) {
 	buf.Write(content)
 	sum := BCCVerify(buf.Bytes(), 0, -1)
 
-	return &BytePacket{
+	return &BinPacket{
 		id:   idBts,
 		cmd:  cmdBts,
 		size: sizeBts,
@@ -70,32 +70,32 @@ func NewBytePacket(id string, cmd string, content []byte) (*BytePacket, error) {
 
 //----------------------------------------
 
-func (o *BytePacket) Id() string {
+func (o *BinPacket) Id() string {
 	return hex.EncodeToString(o.id)
 }
 
-func (o *BytePacket) Cmd() string {
+func (o *BinPacket) Cmd() string {
 	return hex.EncodeToString(o.cmd)
 }
 
-func (o *BytePacket) Size() int { //uint16
+func (o *BinPacket) Size() int { //uint16
 	size := binary.BigEndian.Uint16(o.size)
 	return int(size)
 }
 
-func (o *BytePacket) Content() string { //uint16
+func (o *BinPacket) Content() string { //uint16
 	return string(o.cont)
 }
 
-func (o *BytePacket) ContentBytes() []byte { //uint16
+func (o *BinPacket) ContentBytes() []byte { //uint16
 	return o.cont
 }
 
-func (o *BytePacket) Checksum() int {
+func (o *BinPacket) Checksum() int {
 	return int(o.sum)
 }
 
-func (o *BytePacket) Bytes() []byte {
+func (o *BinPacket) Bytes() []byte {
 	var buf bytes.Buffer
 
 	buf.WriteByte('(')
@@ -114,7 +114,7 @@ func (o *BytePacket) Bytes() []byte {
 	return buf.Bytes()
 }
 
-func (o *BytePacket) ToString() string {
+func (o *BinPacket) ToString() string {
 	var buf bytes.Buffer
 
 	buf.WriteString("( Id:")
@@ -138,7 +138,7 @@ func (o *BytePacket) ToString() string {
 
 //=============================================================================
 
-type ByteProtocol struct {
+type BinProtocol struct {
 	LogEnabled bool
 }
 
@@ -172,7 +172,7 @@ func escapePacket(data []byte) []byte {
 		}
 
 		i += 1
-		if i > h {
+		if i >= h {
 			break
 		}
 	}
@@ -180,7 +180,7 @@ func escapePacket(data []byte) []byte {
 	return res
 }
 
-func parsePacket(data []byte, logEnabled bool) (*BytePacket, error) {
+func parsePacket(data []byte, logEnabled bool) (*BinPacket, error) {
 
 	data = escapePacket(data)
 
@@ -228,7 +228,7 @@ func parsePacket(data []byte, logEnabled bool) (*BytePacket, error) {
 		return nil, fmt.Errorf("%s checksum is incorrect. Expected %x, but %x", pktName, sum1, sum2)
 	}
 
-	return &BytePacket{
+	return &BinPacket{
 		id:   id,
 		cmd:  cmd,
 		size: btsSize,
@@ -237,7 +237,7 @@ func parsePacket(data []byte, logEnabled bool) (*BytePacket, error) {
 	}, nil
 }
 
-func (o *ByteProtocol) ReadPacket(reader io.Reader) (Packet, error) {
+func (o *BinProtocol) ReadPacket(reader io.Reader) (Packet, error) {
 	rd := bufio.NewReader(reader)
 	data, err := rd.ReadBytes(')') // end of the 'data' is a ')'
 	if err != nil {
@@ -247,7 +247,7 @@ func (o *ByteProtocol) ReadPacket(reader io.Reader) (Packet, error) {
 	return parsePacket(data, o.LogEnabled)
 }
 
-func (o *ByteProtocol) WritePacket(writer io.Writer, packet Packet) error {
+func (o *BinProtocol) WritePacket(writer io.Writer, packet Packet) error {
 	_, err := writer.Write(packet.Bytes())
 	return err
 }
