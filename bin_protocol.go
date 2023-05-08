@@ -149,6 +149,7 @@ convert these data to 0x28, 0x29, 0x3D respectively.
 */
 func escapePacket(data []byte) []byte {
 	res := data
+
 	i := 0
 	h := len(res) - 1
 	for {
